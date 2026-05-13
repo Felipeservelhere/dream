@@ -1,0 +1,36 @@
+# Node
+node_modules/
+npm-debug.log*
+
+# Build
+dist/
+.next/
+out/
+build/
+
+# Env
+.env
+.env.local
+.env.production
+!.env.example
+
+# SQLite dev database
+*.sqlite
+*.sqlite-journal
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+server-out.txt
+server-err.txt
+
+# Editor
+.vscode/
+.idea/
+
+# TypeORM
+ormconfig.json
