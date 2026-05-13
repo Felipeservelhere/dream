@@ -58,14 +58,21 @@ const ALL_ENTITIES = [
         }
         const dbUrl = process.env.DATABASE_URL;
         if (dbUrl) {
+          // Parse URL manually to avoid TypeORM re-applying sslmode from query string
+          const parsed = new URL(dbUrl);
           return {
             type: 'postgres',
-            url: dbUrl,
+            host: parsed.hostname,
+            port: parseInt(parsed.port || '5432'),
+            username: decodeURIComponent(parsed.username),
+            password: decodeURIComponent(parsed.password),
+            database: parsed.pathname.slice(1),
             ssl: { rejectUnauthorized: false },
             entities: ALL_ENTITIES,
             synchronize: false,
             logging: false,
-            extra: { max: 3 },
+            retryAttempts: 1,
+            extra: { max: 3, connectionTimeoutMillis: 8000 },
           };
         }
         return {
