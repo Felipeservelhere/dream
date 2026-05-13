@@ -14,6 +14,7 @@ import { FlowsController } from './flows/flows.controller';
 import { HandoffService } from './handoff/handoff.service';
 import { SeedService } from './database/seed.service';
 import { Resource } from './database/entities/booking.entity';
+import { MessagingModule } from './messaging/messaging.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { Resource } from './database/entities/booking.entity';
       Tenant, User, Conversation, Message,
       Booking, Resource, Flow, AiConfig,
     ]),
+    MessagingModule,
   ],
   controllers: [
     TenantsController,
