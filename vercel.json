@@ -1,13 +1,25 @@
 {
-  "experimentalServices": {
-    "frontend": {
-      "entrypoint": "frontend",
-      "routePrefix": "/",
-      "framework": "nextjs"
+  "version": 2,
+  "builds": [
+    {
+      "src": "frontend/package.json",
+      "use": "@vercel/next"
     },
-    "backend": {
-      "entrypoint": "backend",
-      "routePrefix": "/_/backend"
+    {
+      "src": "backend/api/index.ts",
+      "use": "@vercel/node",
+      "config": {
+        "tsconfig": "backend/tsconfig.build.json"
+      }
     }
-  }
+  ],
+  "routes": [
+    {
+      "src": "/_/backend/(.*)",
+      "dest": "/backend/api/index.ts"
+    },
+    {
+      "handle": "filesystem"
+    }
+  ]
 }

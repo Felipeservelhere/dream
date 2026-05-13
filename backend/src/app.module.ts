@@ -56,6 +56,18 @@ const ALL_ENTITIES = [
             logging: false,
           };
         }
+        const dbUrl = process.env.DATABASE_URL;
+        if (dbUrl) {
+          return {
+            type: 'postgres',
+            url: dbUrl,
+            ssl: { rejectUnauthorized: false },
+            entities: ALL_ENTITIES,
+            synchronize: false,
+            logging: false,
+            extra: { max: 3 },
+          };
+        }
         return {
           type: 'postgres',
           host: config.get('db.host'),

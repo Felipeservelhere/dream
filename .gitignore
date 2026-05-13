@@ -34,3 +34,5 @@ server-err.txt
 
 # TypeORM
 ormconfig.json
+
+.vercel
