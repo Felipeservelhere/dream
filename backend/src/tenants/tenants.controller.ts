@@ -106,6 +106,54 @@ export class TenantsController {
     }
   }
 
+  @Get('me/whatsapp-qr')
+  @ApiOperation({ summary: 'QR code para conectar WhatsApp' })
+  async getWhatsappQr(@CurrentUser() user: User) {
+    const tenant = await this.tenancyService.findById(user.tenantId);
+    const instanceName = (tenant as any)?.whatsappInstance?.instanceName
+      || process.env.EVOLUTION_INSTANCE_NAME;
+    const evolutionUrl = process.env.EVOLUTION_API_URL;
+    const evolutionKey = process.env.EVOLUTION_API_KEY;
+    if (!evolutionUrl || !evolutionKey || !instanceName) {
+      return { qr: null, error: 'not_configured' };
+    }
+    try {
+      const res = await fetch(`${evolutionUrl}/instance/connect/${instanceName}`, {
+        headers: { apikey: evolutionKey },
+        signal: AbortSignal.timeout(10000),
+      });
+      const data: any = await res.json();
+      return { qr: data?.base64 ?? data?.qrcode?.base64 ?? null, code: data?.code ?? null };
+    } catch {
+      return { qr: null, error: 'unreachable' };
+    }
+  }
+
+  @Post('me/whatsapp-disconnect')
+  @HttpCode(HttpStatus.OK)
+  @Roles(UserRole.ADMIN, UserRole.OWNER)
+  @ApiOperation({ summary: 'Desconectar WhatsApp' })
+  async disconnectWhatsapp(@CurrentUser() user: User) {
+    const tenant = await this.tenancyService.findById(user.tenantId);
+    const instanceName = (tenant as any)?.whatsappInstance?.instanceName
+      || process.env.EVOLUTION_INSTANCE_NAME;
+    const evolutionUrl = process.env.EVOLUTION_API_URL;
+    const evolutionKey = process.env.EVOLUTION_API_KEY;
+    if (!evolutionUrl || !evolutionKey || !instanceName) {
+      return { success: false, error: 'not_configured' };
+    }
+    try {
+      await fetch(`${evolutionUrl}/instance/logout/${instanceName}`, {
+        method: 'DELETE',
+        headers: { apikey: evolutionKey },
+        signal: AbortSignal.timeout(8000),
+      });
+      return { success: true };
+    } catch {
+      return { success: false, error: 'unreachable' };
+    }
+  }
+
   @Get(':id/ai-config')
   @ApiOperation({ summary: 'Configuração de IA do tenant' })
   async getAiConfig(@Param('id') id: string) {

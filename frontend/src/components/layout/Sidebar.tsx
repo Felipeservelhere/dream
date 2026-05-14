@@ -1,5 +1,6 @@
 'use client';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
 import { useThemeStore } from '@/store/theme.store';
@@ -7,14 +8,14 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import {
   LayoutDashboard, MessageSquare, GitBranch,
-  Settings, LogOut, Sun, Moon, Zap,
+  Settings, LogOut, Sun, Moon,
 } from 'lucide-react';
 
 const NAV = [
-  { href: '/dashboard',     icon: LayoutDashboard, label: 'Dashboard',     color: '#3b82f6' },
-  { href: '/conversations', icon: MessageSquare,    label: 'Conversas',     color: '#10b981' },
-  { href: '/flows',         icon: GitBranch,        label: 'Fluxos',        color: '#8b5cf6' },
-  { href: '/settings',      icon: Settings,         label: 'Configurações', color: '#f59e0b' },
+  { href: '/dashboard',     icon: LayoutDashboard, label: 'Dashboard',     color: '#3b82f6', glow: 'rgba(59,130,246,0.4)' },
+  { href: '/conversations', icon: MessageSquare,    label: 'Conversas',     color: '#10b981', glow: 'rgba(16,185,129,0.4)' },
+  { href: '/flows',         icon: GitBranch,        label: 'Fluxos',        color: '#8b5cf6', glow: 'rgba(139,92,246,0.4)' },
+  { href: '/settings',      icon: Settings,         label: 'Configurações', color: '#f59e0b', glow: 'rgba(245,158,11,0.4)' },
 ];
 
 export default function Sidebar() {
@@ -26,11 +27,6 @@ export default function Sidebar() {
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
-
-  function handleLogout() {
-    logout();
-    router.push('/login');
-  }
 
   const initials = user?.name?.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2) || 'US';
 
@@ -44,47 +40,36 @@ export default function Sidebar() {
       position: 'fixed',
       left: 0, top: 0,
       zIndex: 100,
-      borderRight: '1px solid var(--border)',
-      boxShadow: '4px 0 24px rgba(0,0,0,0.3)',
+      borderRight: '1px solid rgba(59,130,246,0.08)',
     }}>
 
       {/* Logo */}
-      <div style={{ padding: '22px 20px 18px', borderBottom: '1px solid var(--border)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
-          <div style={{
-            width: 38, height: 38,
-            background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
-            borderRadius: 10,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 0 16px rgba(59,130,246,0.4)',
-            animation: 'glowPulse 3s ease-in-out infinite',
-            flexShrink: 0,
-          }}>
-            <Zap size={20} color="#fff" fill="#fff" />
-          </div>
-          <div>
-            <div style={{ color: 'var(--text)', fontWeight: 700, fontSize: 15, letterSpacing: '-.01em' }}>
-              Nexa
-            </div>
-            <div style={{ color: 'var(--accent2)', fontSize: 10.5, fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase' }}>
-              AI Platform · v2
-            </div>
-          </div>
+      <div style={{ padding: '20px 16px 16px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+        <Image
+          src="/nexa-logo.png"
+          alt="Nexa"
+          width={110}
+          height={36}
+          style={{ objectFit: 'contain', objectPosition: 'left' }}
+          priority
+        />
+        <div style={{ marginTop: 6, color: 'var(--accent2)', fontSize: 10, fontWeight: 600, letterSpacing: '.12em', textTransform: 'uppercase', paddingLeft: 2 }}>
+          AI Platform · v2
         </div>
       </div>
 
-      {/* Status bar */}
-      <div style={{ padding: '10px 20px', borderBottom: '1px solid var(--border)' }}>
+      {/* Live status */}
+      <div style={{ padding: '8px 18px', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span className="live-dot" />
-          <span style={{ fontSize: 11, color: 'var(--green)', fontWeight: 600 }}>Sistema operacional</span>
+          <span style={{ fontSize: 11, color: 'var(--green)', fontWeight: 600, letterSpacing: '.04em' }}>Sistema operacional</span>
         </div>
       </div>
 
       {/* Nav */}
-      <nav style={{ flex: 1, padding: '14px 10px', overflowY: 'auto' }}>
-        <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text3)', letterSpacing: '.1em', textTransform: 'uppercase', padding: '4px 10px 10px' }}>
-          Menu principal
+      <nav style={{ flex: 1, padding: '12px 8px', overflowY: 'auto' }}>
+        <div style={{ fontSize: 9.5, fontWeight: 700, color: 'var(--text3)', letterSpacing: '.14em', textTransform: 'uppercase', padding: '4px 10px 10px' }}>
+          Menu
         </div>
         {NAV.map((item, i) => {
           const active = pathname.startsWith(item.href);
@@ -92,24 +77,29 @@ export default function Sidebar() {
           return (
             <Link key={item.href} href={item.href}
               className={`nav-link anim-slide anim-d${i + 1} ${active ? 'active' : ''}`}>
-              <div style={{
-                width: 32, height: 32,
-                borderRadius: 8,
-                background: active ? `${item.color}22` : 'var(--sidebar-item)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                transition: 'all .2s',
-                flexShrink: 0,
-              }}>
-                <Icon size={16} color={active ? item.color : 'var(--text2)'} strokeWidth={2} />
+              <div
+                className="nav-icon"
+                style={{
+                  width: 34, height: 34,
+                  borderRadius: 9,
+                  background: active ? `${item.color}18` : 'rgba(255,255,255,0.03)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0,
+                }}>
+                <Icon
+                  size={17}
+                  color={active ? item.color : 'var(--text2)'}
+                  strokeWidth={active ? 2.2 : 1.8}
+                />
               </div>
-              <span>{item.label}</span>
+              <span style={{ fontSize: 13.5 }}>{item.label}</span>
               {active && (
                 <div style={{
-                  marginLeft: 'auto',
-                  width: 6, height: 6,
+                  marginLeft: 'auto', width: 6, height: 6,
                   borderRadius: '50%',
                   background: item.color,
-                  boxShadow: `0 0 6px ${item.color}`,
+                  boxShadow: `0 0 8px ${item.glow}`,
+                  flexShrink: 0,
                 }} />
               )}
             </Link>
@@ -118,29 +108,25 @@ export default function Sidebar() {
       </nav>
 
       {/* Bottom */}
-      <div style={{ borderTop: '1px solid var(--border)', padding: '14px 10px' }}>
+      <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', padding: '10px 8px' }}>
 
         {/* Theme toggle */}
         <button onClick={toggle}
           className="nav-link"
-          style={{ width: '100%', border: 'none', background: 'none', marginBottom: 6, cursor: 'pointer' }}>
-          <div style={{
-            width: 32, height: 32, borderRadius: 8,
-            background: 'var(--sidebar-item)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
+          style={{ width: '100%', border: '1px solid transparent', background: 'none', marginBottom: 4, cursor: 'pointer' }}>
+          <div className="nav-icon" style={{ width: 34, height: 34, borderRadius: 9, background: 'rgba(255,255,255,0.03)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {theme === 'dark'
               ? <Sun  size={16} color="#f59e0b" strokeWidth={2} />
               : <Moon size={16} color="#8b5cf6" strokeWidth={2} />
             }
           </div>
-          <span style={{ fontSize: 13.5, color: 'var(--text2)' }}>
+          <span style={{ fontSize: 13, color: 'var(--text2)' }}>
             {theme === 'dark' ? 'Modo Claro' : 'Modo Escuro'}
           </span>
         </button>
 
         {/* User */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '8px 10px', borderRadius: 10, background: 'var(--sidebar-item)', marginBottom: 6 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '8px 10px', borderRadius: 10, background: 'rgba(255,255,255,0.03)', marginBottom: 6, border: '1px solid rgba(255,255,255,0.05)' }}>
           <div style={{
             width: 32, height: 32,
             background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
@@ -148,33 +134,24 @@ export default function Sidebar() {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             color: '#fff', fontWeight: 700, fontSize: 11,
             flexShrink: 0,
-            boxShadow: '0 0 10px rgba(59,130,246,0.35)',
+            boxShadow: '0 0 12px rgba(59,130,246,0.4)',
           }}>{initials}</div>
           <div style={{ minWidth: 0, flex: 1 }}>
             <div style={{ color: 'var(--text)', fontSize: 12.5, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {user?.name || 'Usuário'}
             </div>
-            <div style={{ color: 'var(--accent2)', fontSize: 10, fontWeight: 500, textTransform: 'capitalize' }}>
+            <div style={{ color: 'var(--accent2)', fontSize: 10, textTransform: 'capitalize' }}>
               {user?.role || 'owner'}
             </div>
           </div>
         </div>
 
         {/* Logout */}
-        <button onClick={handleLogout}
-          style={{
-            width: '100%', padding: '8px 12px',
-            background: 'var(--red-glow)',
-            color: 'var(--red)',
-            border: '1px solid rgba(239,68,68,.15)',
-            borderRadius: 8, fontSize: 12.5, fontWeight: 600,
-            cursor: 'pointer', transition: 'all .2s',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-          }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,.2)'; }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--red-glow)'; }}>
-          <LogOut size={13} strokeWidth={2.5} />
-          Sair da conta
+        <button onClick={() => { logout(); router.push('/login'); }}
+          className="nav-link"
+          style={{ width: '100%', border: '1px solid rgba(239,68,68,.12)', background: 'rgba(239,68,68,.06)', cursor: 'pointer', color: '#f87171', justifyContent: 'center' }}>
+          <LogOut size={14} strokeWidth={2} />
+          <span style={{ fontSize: 13 }}>Sair da conta</span>
         </button>
       </div>
     </aside>
