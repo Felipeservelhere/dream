@@ -2,8 +2,8 @@
 
 /* ── Theme Variables ───────────────────────────────────────── */
 :root {
-  --bg:            #000000;
-  --bg2:           #050810;
+  --bg:            #040810;
+  --bg2:           #060c18;
   --surface:       #080d18;
   --card:          #0a1020;
   --card-hover:    #0f1628;
@@ -53,7 +53,7 @@
   --accent-glow:   rgba(37,99,235,0.08);
   --accent-glow2:  rgba(37,99,235,0.18);
   --accent-glow3:  rgba(37,99,235,0.3);
-  --sidebar:       #0f172a;
+  --sidebar:       #071428;
   --sidebar-item:  rgba(255,255,255,0.04);
   --sidebar-active:rgba(59,130,246,0.2);
   --green:         #059669;
@@ -76,12 +76,23 @@
 html { scroll-behavior: smooth; }
 
 body {
-  background: var(--bg);
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(ellipse at -8% 48%, rgba(210,40,40,0.07)   0%, transparent 28%),
+    radial-gradient(ellipse at -2% 54%, rgba(40,200,70,0.05)   0%, transparent 22%),
+    radial-gradient(ellipse at  4% 43%, rgba(59,130,246,0.09)  0%, transparent 28%),
+    radial-gradient(ellipse at 10% 58%, rgba(130,40,255,0.05)  0%, transparent 22%),
+    radial-gradient(ellipse at 78% 12%, rgba(59,130,246,0.06)  0%, transparent 38%),
+    radial-gradient(ellipse at 88% 80%, rgba(80,40,200,0.05)   0%, transparent 32%);
+  background-attachment: fixed;
   color: var(--text);
   font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
-  transition: background 0.4s ease, color 0.4s ease;
+  transition: background-color 0.4s ease, color 0.4s ease;
   min-height: 100vh;
+}
+[data-theme="light"] body {
+  background-image: none;
 }
 
 /* ── Scrollbar ──────────────────────────────────────────────── */
@@ -182,22 +193,53 @@ body {
   100% { transform: rotate(360deg) scale(1); }
 }
 @keyframes iconBounce {
-  0%   { transform: translateY(0)   scale(1); }
-  35%  { transform: translateY(-5px) scale(1.2); }
+  0%   { transform: translateY(0)    scale(1); }
+  35%  { transform: translateY(-6px) scale(1.2); }
   65%  { transform: translateY(-2px) scale(1.05); }
-  100% { transform: translateY(0)   scale(1); }
+  100% { transform: translateY(0)    scale(1); }
 }
-@keyframes iconWiggle {
-  0%,100% { transform: rotate(0deg)   scale(1); }
-  20%     { transform: rotate(-15deg) scale(1.15); }
-  50%     { transform: rotate(15deg)  scale(1.15); }
-  80%     { transform: rotate(-8deg)  scale(1.05); }
+@keyframes iconScan {
+  0%   { transform: scale(1)    skewX(0deg); opacity: 1; }
+  25%  { transform: scale(1.18) skewX(-4deg); opacity: 0.8; }
+  55%  { transform: scale(0.92) skewX(3deg);  opacity: 1; }
+  80%  { transform: scale(1.08) skewX(-1deg); opacity: 0.9; }
+  100% { transform: scale(1)    skewX(0deg);  opacity: 1; }
 }
 @keyframes iconPulse {
   0%   { transform: scale(1);    opacity: 1; }
   30%  { transform: scale(1.35); opacity: 0.75; }
   60%  { transform: scale(0.9);  opacity: 1; }
   100% { transform: scale(1);    opacity: 1; }
+}
+@keyframes iconRedraw {
+  0%   { stroke-dashoffset: 200; opacity: 0.1; }
+  45%  { opacity: 0.8; }
+  100% { stroke-dashoffset: 0;   opacity: 1; }
+}
+@keyframes iconFlowPulse {
+  0%, 100% { stroke-dashoffset: 0;   opacity: 1; }
+  50%       { stroke-dashoffset: -40; opacity: 0.7; }
+}
+
+/* Stroke-draw: Flows icon (GitBranch paths animate like circuits) */
+.icon-draw svg path,
+.icon-draw svg circle,
+.icon-draw svg polyline,
+.icon-draw svg line {
+  stroke-dasharray: 200;
+  stroke-dashoffset: 0;
+}
+.nav-link:hover .icon-draw svg path,
+.nav-link:hover .icon-draw svg circle,
+.nav-link:hover .icon-draw svg polyline,
+.nav-link:hover .icon-draw svg line {
+  animation: iconRedraw 0.55s cubic-bezier(0.4,0,0.2,1) forwards;
+}
+.nav-link.active .icon-draw svg path,
+.nav-link.active .icon-draw svg circle,
+.nav-link.active .icon-draw svg polyline,
+.nav-link.active .icon-draw svg line {
+  animation: iconFlowPulse 2s ease-in-out infinite;
 }
 
 /* ── Sidebar nav link ────────────────────────────────────────── */
@@ -226,7 +268,7 @@ body {
 }
 .nav-link:hover .icon-spin   { animation: iconSpin   0.55s cubic-bezier(.4,0,.2,1) forwards; }
 .nav-link:hover .icon-bounce { animation: iconBounce 0.5s  cubic-bezier(.34,1.56,.64,1) forwards; }
-.nav-link:hover .icon-wiggle { animation: iconWiggle 0.45s ease forwards; }
+.nav-link:hover .icon-scan   { animation: iconScan   0.5s  ease forwards; }
 .nav-link:hover .icon-pulse  { animation: iconPulse  0.45s ease forwards; }
 
 .nav-link.active {

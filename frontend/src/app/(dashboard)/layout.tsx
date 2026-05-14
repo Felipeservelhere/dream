@@ -29,7 +29,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="grid-bg" style={{
       display: 'flex',
       minHeight: '100vh',
-      background: 'var(--bg)',
+      background: 'transparent',
     }}>
       <Sidebar />
       <main style={{

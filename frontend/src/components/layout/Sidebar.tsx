@@ -12,9 +12,9 @@ import {
 } from 'lucide-react';
 
 const NAV = [
-  { href: '/dashboard',     icon: LayoutDashboard, label: 'Dashboard',     color: '#3b82f6', glow: 'rgba(59,130,246,0.7)',  anim: 'pulse'  },
+  { href: '/dashboard',     icon: LayoutDashboard, label: 'Dashboard',     color: '#3b82f6', glow: 'rgba(59,130,246,0.7)',  anim: 'scan'   },
   { href: '/conversations', icon: MessageSquare,    label: 'Conversas',     color: '#10b981', glow: 'rgba(16,185,129,0.7)',  anim: 'bounce' },
-  { href: '/flows',         icon: GitBranch,        label: 'Fluxos',        color: '#8b5cf6', glow: 'rgba(139,92,246,0.7)', anim: 'wiggle' },
+  { href: '/flows',         icon: GitBranch,        label: 'Fluxos',        color: '#8b5cf6', glow: 'rgba(139,92,246,0.7)', anim: 'draw'   },
   { href: '/settings',      icon: Settings,         label: 'Configurações', color: '#f59e0b', glow: 'rgba(245,158,11,0.7)', anim: 'spin'   },
 ];
 
