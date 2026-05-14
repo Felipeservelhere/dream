@@ -8,8 +8,16 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR" className="h-full">
-      <body className="h-full antialiased">{children}</body>
+    <html lang="pt-BR" className="h-full" data-theme="dark">
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: `
+          try {
+            var s = JSON.parse(localStorage.getItem('omni-theme') || '{}');
+            document.documentElement.setAttribute('data-theme', s.state?.theme || 'dark');
+          } catch(e) {}
+        ` }} />
+      </head>
+      <body className="h-full">{children}</body>
     </html>
   );
 }

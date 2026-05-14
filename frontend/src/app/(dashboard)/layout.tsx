@@ -2,11 +2,13 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
+import { useThemeStore } from '@/store/theme.store';
 import Sidebar from '@/components/layout/Sidebar';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { token } = useAuthStore();
-  const router = useRouter();
+  const { theme }  = useThemeStore();
+  const router     = useRouter();
 
   useEffect(() => {
     useAuthStore.persist.rehydrate();
@@ -15,14 +17,28 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }, [router]);
 
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
+
   if (!token && typeof window !== 'undefined' && !localStorage.getItem('token')) {
     return null;
   }
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: '#f8fafc' }}>
+    <div className="grid-bg" style={{
+      display: 'flex',
+      minHeight: '100vh',
+      background: 'var(--bg)',
+    }}>
       <Sidebar />
-      <main style={{ flex: 1, marginLeft: 240, padding: '32px', overflowY: 'auto', minHeight: '100vh' }}>
+      <main style={{
+        flex: 1,
+        marginLeft: 240,
+        padding: '32px 36px',
+        overflowY: 'auto',
+        minHeight: '100vh',
+      }}>
         {children}
       </main>
     </div>
