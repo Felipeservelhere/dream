@@ -86,7 +86,8 @@ export class TenantsController {
   @ApiOperation({ summary: 'Status da conexão WhatsApp' })
   async getWhatsappStatus(@CurrentUser() user: User) {
     const tenant = await this.tenancyService.findById(user.tenantId);
-    const instanceName = (tenant as any)?.whatsappInstance?.instanceName;
+    const instanceName = (tenant as any)?.whatsappInstance?.instanceName
+      || process.env.EVOLUTION_INSTANCE_NAME;
     const evolutionUrl = process.env.EVOLUTION_API_URL;
     const evolutionKey = process.env.EVOLUTION_API_KEY;
 

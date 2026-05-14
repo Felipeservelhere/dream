@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'OmniDesk AI — Atendimento Inteligente',
-  description: 'Plataforma de atendimento via WhatsApp com IA',
+  title: 'Nexa — Atendimento Inteligente',
+  description: 'Nexa — Plataforma de atendimento via WhatsApp com IA',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

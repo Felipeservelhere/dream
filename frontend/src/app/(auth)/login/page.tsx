@@ -78,8 +78,8 @@ export default function LoginPage() {
               <Zap size={24} color="#fff" fill="#fff" />
             </div>
             <div>
-              <div style={{ color: '#f1f5f9', fontSize: 22, fontWeight: 800, letterSpacing: '-.02em' }}>OmniDesk AI</div>
-              <div style={{ color: '#3b82f6', fontSize: 11, fontWeight: 600, letterSpacing: '.1em', textTransform: 'uppercase' }}>Intelligent Platform</div>
+              <div style={{ color: '#f1f5f9', fontSize: 22, fontWeight: 800, letterSpacing: '-.02em' }}>Nexa</div>
+              <div style={{ color: '#3b82f6', fontSize: 11, fontWeight: 600, letterSpacing: '.1em', textTransform: 'uppercase' }}>AI Platform</div>
             </div>
           </div>
 

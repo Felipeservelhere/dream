@@ -64,10 +64,10 @@ export default function Sidebar() {
           </div>
           <div>
             <div style={{ color: 'var(--text)', fontWeight: 700, fontSize: 15, letterSpacing: '-.01em' }}>
-              OmniDesk
+              Nexa
             </div>
             <div style={{ color: 'var(--accent2)', fontSize: 10.5, fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase' }}>
-              AI Platform
+              AI Platform · v2
             </div>
           </div>
         </div>
