@@ -175,6 +175,31 @@ body {
   border: 1px solid var(--border2);
 }
 
+/* ── Icon animations ─────────────────────────────────────────── */
+@keyframes iconSpin {
+  0%   { transform: rotate(0deg)   scale(1); }
+  40%  { transform: rotate(200deg) scale(1.2); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+@keyframes iconBounce {
+  0%   { transform: translateY(0)   scale(1); }
+  35%  { transform: translateY(-5px) scale(1.2); }
+  65%  { transform: translateY(-2px) scale(1.05); }
+  100% { transform: translateY(0)   scale(1); }
+}
+@keyframes iconWiggle {
+  0%,100% { transform: rotate(0deg)   scale(1); }
+  20%     { transform: rotate(-15deg) scale(1.15); }
+  50%     { transform: rotate(15deg)  scale(1.15); }
+  80%     { transform: rotate(-8deg)  scale(1.05); }
+}
+@keyframes iconPulse {
+  0%   { transform: scale(1);    opacity: 1; }
+  30%  { transform: scale(1.35); opacity: 0.75; }
+  60%  { transform: scale(0.9);  opacity: 1; }
+  100% { transform: scale(1);    opacity: 1; }
+}
+
 /* ── Sidebar nav link ────────────────────────────────────────── */
 .nav-link {
   display: flex;
@@ -186,7 +211,7 @@ body {
   color: var(--text2);
   font-size: 13.5px;
   font-weight: 500;
-  transition: all 0.2s ease;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
   position: relative;
   cursor: pointer;
   border: 1px solid transparent;
@@ -197,9 +222,13 @@ body {
   border-color: rgba(59,130,246,0.12);
 }
 .nav-link:hover .nav-icon {
-  transform: scale(1.15) translateY(-1px);
-  filter: drop-shadow(0 0 6px currentColor);
+  filter: drop-shadow(0 0 7px var(--icon-glow, rgba(59,130,246,0.7)));
 }
+.nav-link:hover .icon-spin   { animation: iconSpin   0.55s cubic-bezier(.4,0,.2,1) forwards; }
+.nav-link:hover .icon-bounce { animation: iconBounce 0.5s  cubic-bezier(.34,1.56,.64,1) forwards; }
+.nav-link:hover .icon-wiggle { animation: iconWiggle 0.45s ease forwards; }
+.nav-link:hover .icon-pulse  { animation: iconPulse  0.45s ease forwards; }
+
 .nav-link.active {
   background: var(--sidebar-active);
   color: var(--accent2);
@@ -207,7 +236,7 @@ body {
   border-color: rgba(59,130,246,0.2);
 }
 .nav-link.active .nav-icon {
-  filter: drop-shadow(0 0 8px var(--accent));
+  filter: drop-shadow(0 0 8px var(--icon-glow, rgba(59,130,246,0.6)));
 }
 .nav-link.active::before {
   content: '';
@@ -219,8 +248,16 @@ body {
   box-shadow: 0 0 10px var(--accent);
 }
 .nav-icon {
-  transition: transform 0.2s cubic-bezier(.34,1.56,.64,1), filter 0.2s ease;
   display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+/* ── Sidebar logo (white in dark mode) ───────────────────────── */
+.sidebar-logo {
+  filter: brightness(0) invert(1);
+}
+[data-theme="light"] .sidebar-logo {
+  filter: none;
 }
 
 /* ── Card base ──────────────────────────────────────────────── */

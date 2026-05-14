@@ -12,10 +12,10 @@ import {
 } from 'lucide-react';
 
 const NAV = [
-  { href: '/dashboard',     icon: LayoutDashboard, label: 'Dashboard',     color: '#3b82f6', glow: 'rgba(59,130,246,0.4)' },
-  { href: '/conversations', icon: MessageSquare,    label: 'Conversas',     color: '#10b981', glow: 'rgba(16,185,129,0.4)' },
-  { href: '/flows',         icon: GitBranch,        label: 'Fluxos',        color: '#8b5cf6', glow: 'rgba(139,92,246,0.4)' },
-  { href: '/settings',      icon: Settings,         label: 'Configurações', color: '#f59e0b', glow: 'rgba(245,158,11,0.4)' },
+  { href: '/dashboard',     icon: LayoutDashboard, label: 'Dashboard',     color: '#3b82f6', glow: 'rgba(59,130,246,0.7)',  anim: 'pulse'  },
+  { href: '/conversations', icon: MessageSquare,    label: 'Conversas',     color: '#10b981', glow: 'rgba(16,185,129,0.7)',  anim: 'bounce' },
+  { href: '/flows',         icon: GitBranch,        label: 'Fluxos',        color: '#8b5cf6', glow: 'rgba(139,92,246,0.7)', anim: 'wiggle' },
+  { href: '/settings',      icon: Settings,         label: 'Configurações', color: '#f59e0b', glow: 'rgba(245,158,11,0.7)', anim: 'spin'   },
 ];
 
 export default function Sidebar() {
@@ -50,6 +50,7 @@ export default function Sidebar() {
           alt="Nexa"
           width={110}
           height={36}
+          className="sidebar-logo"
           style={{ objectFit: 'contain', objectPosition: 'left' }}
           priority
         />
@@ -76,18 +77,11 @@ export default function Sidebar() {
           const Icon   = item.icon;
           return (
             <Link key={item.href} href={item.href}
-              className={`nav-link anim-slide anim-d${i + 1} ${active ? 'active' : ''}`}>
-              <div
-                className="nav-icon"
-                style={{
-                  width: 34, height: 34,
-                  borderRadius: 9,
-                  background: active ? `${item.color}18` : 'rgba(255,255,255,0.03)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  flexShrink: 0,
-                }}>
+              className={`nav-link anim-slide anim-d${i + 1} ${active ? 'active' : ''}`}
+              style={{ '--icon-glow': item.glow } as React.CSSProperties}>
+              <div className={`nav-icon icon-${item.anim}`}>
                 <Icon
-                  size={17}
+                  size={18}
                   color={active ? item.color : 'var(--text2)'}
                   strokeWidth={active ? 2.2 : 1.8}
                 />
@@ -113,8 +107,8 @@ export default function Sidebar() {
         {/* Theme toggle */}
         <button onClick={toggle}
           className="nav-link"
-          style={{ width: '100%', border: '1px solid transparent', background: 'none', marginBottom: 4, cursor: 'pointer' }}>
-          <div className="nav-icon" style={{ width: 34, height: 34, borderRadius: 9, background: 'rgba(255,255,255,0.03)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          style={{ '--icon-glow': theme === 'dark' ? 'rgba(245,158,11,0.7)' : 'rgba(139,92,246,0.7)', width: '100%', border: '1px solid transparent', background: 'none', marginBottom: 4, cursor: 'pointer' } as React.CSSProperties}>
+          <div className="nav-icon icon-spin">
             {theme === 'dark'
               ? <Sun  size={16} color="#f59e0b" strokeWidth={2} />
               : <Moon size={16} color="#8b5cf6" strokeWidth={2} />
