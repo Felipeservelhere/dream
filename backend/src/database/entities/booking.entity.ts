@@ -63,7 +63,7 @@ export class Booking {
   @Column()
   resourceId: string;
 
-  @Column({ type: 'datetime' })
+  @Column({ type: 'timestamp' })
   scheduledAt: Date;
 
   @Column({ type: 'int', default: 30 })

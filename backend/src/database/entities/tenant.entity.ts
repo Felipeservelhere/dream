@@ -89,7 +89,7 @@ export class Tenant {
     phone: string;
   };
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   trialEndsAt: Date;
 
   @CreateDateColumn()
