@@ -57,4 +57,5 @@ export const settingsApi = {
   updateAiConfig: (tenantId: string, data: any) =>
     api.put(`/tenants/${tenantId}/ai-config`, data),
   getMe: () => api.get('/tenants/me'),
+  getWhatsappStatus: () => api.get('/tenants/me/whatsapp-status'),
 };

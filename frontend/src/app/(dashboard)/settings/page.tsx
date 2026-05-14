@@ -8,12 +8,16 @@ export default function SettingsPage() {
   const [config, setConfig] = useState<any>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [wpStatus, setWpStatus] = useState<string>('loading');
 
   useEffect(() => {
     if (user?.tenantId) {
       settingsApi.getAiConfig(user.tenantId)
         .then((r) => setConfig(r.data))
         .catch(() => {});
+      settingsApi.getWhatsappStatus()
+        .then((r) => setWpStatus(r.data.status))
+        .catch(() => setWpStatus('unreachable'));
     }
   }, [user]);
 
@@ -44,17 +48,21 @@ export default function SettingsPage() {
         <h2 style={{ fontWeight: 700, color: '#0f172a', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 22 }}>📱</span> Conexão WhatsApp
         </h2>
-        <div style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 8, padding: '12px 16px', fontSize: 14, color: '#92400e', marginBottom: 16 }}>
-          ⚠️ Para conectar o WhatsApp, você precisa ter a <strong>Evolution API</strong> rodando. Configure a URL e chave no arquivo <code>.env</code> do backend.
-        </div>
-        <div style={{ display: 'flex', gap: 10 }}>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
           <div style={{ flex: 1, padding: '12px 16px', background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 13, color: '#64748b' }}>
-            Status: <strong style={{ color: '#ef4444' }}>Desconectado</strong>
+            Status:{' '}
+            {wpStatus === 'loading' && <strong style={{ color: '#94a3b8' }}>Verificando...</strong>}
+            {wpStatus === 'open' && <strong style={{ color: '#16a34a' }}>✅ Conectado</strong>}
+            {wpStatus === 'not_configured' && <strong style={{ color: '#f59e0b' }}>⚠️ Não configurado</strong>}
+            {wpStatus === 'unreachable' && <strong style={{ color: '#ef4444' }}>❌ Evolution API inacessível</strong>}
+            {!['loading','open','not_configured','unreachable'].includes(wpStatus) && <strong style={{ color: '#ef4444' }}>{wpStatus}</strong>}
           </div>
-          <button style={{ padding: '12px 20px', background: '#25d366', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: 14 }}>
-            🔗 Conectar WhatsApp
-          </button>
         </div>
+        {wpStatus === 'unreachable' && (
+          <p style={{ marginTop: 10, fontSize: 13, color: '#64748b' }}>
+            O túnel para a Evolution API está fora do ar. Reinicie o Cloudflare tunnel na sua máquina local e atualize a variável <code>EVOLUTION_API_URL</code> no Vercel.
+          </p>
+        )}
       </div>
 
       {/* IA Config */}
