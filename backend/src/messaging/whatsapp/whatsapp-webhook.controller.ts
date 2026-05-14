@@ -2,10 +2,9 @@ import {
   Controller, Post, Body, Param, HttpCode, HttpStatus, Logger,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
-import { InjectQueue } from '@nestjs/bull';
-import type { Queue } from 'bull';
 import { EvolutionApiService } from './evolution-api.service';
 import { TenancyService } from '../../core/tenancy/tenancy.service';
+import { MessageProcessorService } from '../processor/message-processor.service';
 
 @ApiTags('Webhooks')
 @Controller('webhook')
@@ -15,7 +14,7 @@ export class WhatsappWebhookController {
   constructor(
     private readonly evolutionApi: EvolutionApiService,
     private readonly tenancyService: TenancyService,
-    @InjectQueue('messages') private readonly messageQueue: Queue,
+    private readonly messageProcessor: MessageProcessorService,
   ) {}
 
   @Post(':instanceName')
@@ -28,30 +27,29 @@ export class WhatsappWebhookController {
     const inbound = this.evolutionApi.parseWebhookPayload(payload);
     if (!inbound) return { ok: true };
 
-    // Encontrar tenant pela instância
     const tenants = await this.tenancyService.findAll();
-    const tenant = tenants.find(
+
+    // Try matching by stored instance name first, fall back to env var
+    let tenant = tenants.find(
       (t) => t.whatsappInstance?.instanceName === instanceName,
     );
+    if (!tenant && instanceName === process.env.EVOLUTION_INSTANCE_NAME) {
+      tenant = tenants[0];
+    }
 
     if (!tenant) {
       this.logger.warn(`No tenant found for instance: ${instanceName}`);
       return { ok: true };
     }
 
-    // Enfileirar para processamento assíncrono
-    await this.messageQueue.add(
-      'process',
-      { tenantId: tenant.id, inbound },
-      {
-        attempts: 3,
-        backoff: { type: 'exponential', delay: 2000 },
-        removeOnComplete: 100,
-        removeOnFail: 500,
-      },
-    );
+    // Process synchronously — Bull queues don't run in serverless
+    try {
+      await this.messageProcessor.process(tenant, inbound);
+      this.logger.debug(`[${tenant.id}] Message processed from ${inbound.phone}`);
+    } catch (err) {
+      this.logger.error(`[${tenant.id}] Failed to process message from ${inbound.phone}`, err);
+    }
 
-    this.logger.debug(`[${tenant.id}] Message queued from ${inbound.phone}`);
     return { ok: true };
   }
 }
