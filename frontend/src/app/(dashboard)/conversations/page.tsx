@@ -1,10 +1,10 @@
 'use client';
 import { useEffect, useState, useRef } from 'react';
-import { conversationsApi } from '@/lib/api';
+import { conversationsApi, settingsApi } from '@/lib/api';
 import { formatRelativeTime, getInitials } from '@/lib/utils';
 import {
   MessageSquare, Search, Send, UserCheck,
-  CheckCheck, RotateCcw, Bot, User, Smartphone, ChevronDown,
+  CheckCheck, RotateCcw, Bot, User, Smartphone, RefreshCw,
 } from 'lucide-react';
 
 const STATUS_CFG: Record<string, { label: string; color: string; bg: string; dot: string }> = {
@@ -29,16 +29,37 @@ export default function ConversationsPage() {
   const [messages,      setMessages]      = useState<any[]>([]);
   const [reply,         setReply]         = useState('');
   const [loading,       setLoading]       = useState(true);
+  const [syncing,       setSyncing]       = useState(false);
+  const [syncMsg,       setSyncMsg]       = useState('');
   const [filter,        setFilter]        = useState('all');
   const [search,        setSearch]        = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    conversationsApi.list()
+  function loadConversations() {
+    return conversationsApi.list()
       .then((r) => setConversations(r.data?.data || r.data || []))
-      .catch(() => setConversations([]))
-      .finally(() => setLoading(false));
+      .catch(() => setConversations([]));
+  }
+
+  useEffect(() => {
+    loadConversations().finally(() => setLoading(false));
   }, []);
+
+  async function handleSync() {
+    setSyncing(true);
+    setSyncMsg('');
+    try {
+      const r = await settingsApi.syncWhatsapp();
+      const count = r.data?.synced ?? 0;
+      setSyncMsg(`${count} conversa${count !== 1 ? 's' : ''} importada${count !== 1 ? 's' : ''}`);
+      await loadConversations();
+    } catch {
+      setSyncMsg('Erro ao sincronizar');
+    } finally {
+      setSyncing(false);
+      setTimeout(() => setSyncMsg(''), 4000);
+    }
+  }
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -75,9 +96,26 @@ export default function ConversationsPage() {
         <div style={{ padding: '18px 16px 12px', borderBottom: '1px solid var(--border)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
             <h2 style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>Conversas</h2>
-            <span style={{ fontSize: 11, color: 'var(--accent2)', fontWeight: 600, background: 'var(--accent-glow)', padding: '2px 8px', borderRadius: 20 }}>
-              {filtered.length}
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              {syncMsg && <span style={{ fontSize: 10, color: 'var(--green)', fontWeight: 600 }}>{syncMsg}</span>}
+              <button
+                onClick={handleSync}
+                disabled={syncing}
+                title="Importar todas as conversas do WhatsApp"
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 4,
+                  padding: '4px 9px', borderRadius: 7, border: '1px solid var(--border2)',
+                  background: 'var(--accent-glow)', color: 'var(--accent2)',
+                  fontSize: 11, fontWeight: 600, cursor: syncing ? 'wait' : 'pointer',
+                  opacity: syncing ? 0.7 : 1, transition: 'all 0.15s',
+                }}>
+                <RefreshCw size={11} strokeWidth={2.5} style={{ animation: syncing ? 'rotate .8s linear infinite' : 'none' }} />
+                {syncing ? 'Sync...' : 'Sync'}
+              </button>
+              <span style={{ fontSize: 11, color: 'var(--accent2)', fontWeight: 600, background: 'var(--accent-glow)', padding: '2px 8px', borderRadius: 20 }}>
+                {filtered.length}
+              </span>
+            </div>
           </div>
           {/* Search */}
           <div style={{ position: 'relative', marginBottom: 10 }}>

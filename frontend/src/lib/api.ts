@@ -60,4 +60,5 @@ export const settingsApi = {
   getWhatsappStatus: () => api.get('/tenants/me/whatsapp-status'),
   getWhatsappQr: () => api.get('/tenants/me/whatsapp-qr'),
   disconnectWhatsapp: () => api.post('/tenants/me/whatsapp-disconnect'),
+  syncWhatsapp: () => api.post('/tenants/me/whatsapp-sync'),
 };

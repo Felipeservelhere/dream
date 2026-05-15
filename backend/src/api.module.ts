@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Tenant } from './database/entities/tenant.entity';
 import { User } from './database/entities/user.entity';
+import { Client } from './database/entities/client.entity';
 import { Conversation } from './database/entities/conversation.entity';
 import { Message } from './database/entities/message.entity';
 import { Booking } from './database/entities/booking.entity';
@@ -19,7 +20,7 @@ import { MessagingModule } from './messaging/messaging.module';
 @Module({
   imports: [
     TypeOrmModule.forFeature([
-      Tenant, User, Conversation, Message,
+      Tenant, User, Client, Conversation, Message,
       Booking, Resource, Flow, AiConfig,
     ]),
     MessagingModule,

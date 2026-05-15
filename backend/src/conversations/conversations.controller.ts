@@ -9,6 +9,7 @@ import { CurrentUser } from '../core/auth/decorators/current-user.decorator';
 import { User } from '../database/entities/user.entity';
 import { Conversation, ConversationStatus } from '../database/entities/conversation.entity';
 import { Message } from '../database/entities/message.entity';
+import { Client } from '../database/entities/client.entity';
 import { HandoffService } from '../handoff/handoff.service';
 import { MessageDispatcherService } from '../messaging/dispatcher/message-dispatcher.service';
 import { IsString } from 'class-validator';
@@ -25,6 +26,7 @@ export class ConversationsController {
   constructor(
     @InjectRepository(Conversation) private readonly convRepo: Repository<Conversation>,
     @InjectRepository(Message) private readonly msgRepo: Repository<Message>,
+    @InjectRepository(Client) private readonly clientRepo: Repository<Client>,
     private readonly handoffService: HandoffService,
     private readonly dispatcher: MessageDispatcherService,
   ) {}
@@ -69,12 +71,58 @@ export class ConversationsController {
     @CurrentUser() user: User,
     @Query('limit') limit = 50,
   ) {
-    const data = await this.msgRepo.find({
+    const dbMessages = await this.msgRepo.find({
       where: { conversationId: id, tenantId: user.tenantId },
       order: { createdAt: 'ASC' },
       take: limit,
     });
-    return { data, total: data.length };
+    if (dbMessages.length > 0) return { data: dbMessages, total: dbMessages.length };
+
+    // No DB messages — fetch live from Evolution API using the client's phone
+    const evolutionUrl = process.env.EVOLUTION_API_URL;
+    const evolutionKey = process.env.EVOLUTION_API_KEY;
+    const instanceName = process.env.EVOLUTION_INSTANCE_NAME;
+
+    const conv = await this.convRepo.findOne({ where: { id, tenantId: user.tenantId } });
+    const client = conv?.clientId
+      ? await this.clientRepo.findOne({ where: { id: conv.clientId } })
+      : null;
+
+    if (!evolutionUrl || !evolutionKey || !instanceName || !client?.phone) {
+      return { data: [], total: 0 };
+    }
+
+    try {
+      const res = await fetch(`${evolutionUrl}/chat/findMessages/${instanceName}`, {
+        method: 'POST',
+        headers: { apikey: evolutionKey, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ where: { key: { remoteJid: client.phone } }, limit: Number(limit) }),
+        signal: AbortSignal.timeout(10000),
+      });
+      const raw: any = await res.json();
+      const records: any[] = raw?.messages?.records || [];
+
+      const data = records
+        .sort((a, b) => a.messageTimestamp - b.messageTimestamp)
+        .map((msg) => ({
+          id: msg.id,
+          conversationId: id,
+          tenantId: user.tenantId,
+          direction: msg.key?.fromMe ? 'outbound' : 'inbound',
+          sender: msg.key?.fromMe ? 'ai' : 'client',
+          type: 'text',
+          text: msg.message?.conversation
+            ?? msg.message?.extendedTextMessage?.text
+            ?? msg.message?.imageMessage?.caption
+            ?? msg.message?.videoMessage?.caption
+            ?? `[${msg.messageType}]`,
+          createdAt: new Date(msg.messageTimestamp * 1000),
+        }));
+
+      return { data, total: data.length };
+    } catch {
+      return { data: [], total: 0 };
+    }
   }
 
   @Post(':id/send')

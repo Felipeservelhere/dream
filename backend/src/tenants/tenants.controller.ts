@@ -12,6 +12,8 @@ import { TenancyService } from '../core/tenancy/tenancy.service';
 import { Tenant, TenantNiche, TenantPlan } from '../database/entities/tenant.entity';
 import { User, UserRole } from '../database/entities/user.entity';
 import { AiConfig } from '../database/entities/ai-config.entity';
+import { Client } from '../database/entities/client.entity';
+import { Conversation } from '../database/entities/conversation.entity';
 import { IsString, IsOptional, IsEnum } from 'class-validator';
 
 class CreateTenantDto {
@@ -38,6 +40,8 @@ export class TenantsController {
     private readonly tenancyService: TenancyService,
     @InjectRepository(Tenant) private readonly tenantRepo: Repository<Tenant>,
     @InjectRepository(AiConfig) private readonly aiConfigRepo: Repository<AiConfig>,
+    @InjectRepository(Client) private readonly clientRepo: Repository<Client>,
+    @InjectRepository(Conversation) private readonly convRepo: Repository<Conversation>,
   ) {}
 
   @Get('me')
@@ -126,6 +130,64 @@ export class TenantsController {
       return { qr: data?.base64 ?? data?.qrcode?.base64 ?? null, code: data?.code ?? null };
     } catch {
       return { qr: null, error: 'unreachable' };
+    }
+  }
+
+  @Post('me/whatsapp-sync')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Importar todas as conversas do WhatsApp para o banco' })
+  async syncWhatsappChats(@CurrentUser() user: User) {
+    const tenant = await this.tenancyService.findById(user.tenantId);
+    const instanceName = (tenant as any)?.whatsappInstance?.instanceName
+      || process.env.EVOLUTION_INSTANCE_NAME;
+    const evolutionUrl = process.env.EVOLUTION_API_URL;
+    const evolutionKey = process.env.EVOLUTION_API_KEY;
+
+    if (!evolutionUrl || !evolutionKey || !instanceName) {
+      return { synced: 0, error: 'not_configured' };
+    }
+
+    try {
+      const res = await fetch(`${evolutionUrl}/chat/findChats/${instanceName}`, {
+        method: 'POST',
+        headers: { apikey: evolutionKey, 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+        signal: AbortSignal.timeout(15000),
+      });
+      const chats: any[] = await res.json();
+      const individualChats = (Array.isArray(chats) ? chats : [])
+        .filter((c) => !c.remoteJid?.endsWith('@g.us'));
+
+      let synced = 0;
+      for (const chat of individualChats) {
+        try {
+          const phone = chat.remoteJid as string;
+          const name = chat.pushName || phone;
+
+          let client = await this.clientRepo.findOne({ where: { tenantId: user.tenantId, phone } });
+          if (!client) {
+            client = await this.clientRepo.save(
+              this.clientRepo.create({ tenantId: user.tenantId, phone, name }),
+            );
+          } else if (name && name !== phone && client.name === phone) {
+            await this.clientRepo.update(client.id, { name });
+          }
+
+          const existing = await this.convRepo.findOne({
+            where: { tenantId: user.tenantId, clientId: client.id },
+          });
+          if (!existing) {
+            const conv = this.convRepo.create({ tenantId: user.tenantId, clientId: client.id });
+            if (chat.updatedAt) (conv as any).updatedAt = new Date(chat.updatedAt);
+            await this.convRepo.save(conv);
+          }
+          synced++;
+        } catch { /* skip failed chats */ }
+      }
+
+      return { synced };
+    } catch {
+      return { synced: 0, error: 'unreachable' };
     }
   }
 
