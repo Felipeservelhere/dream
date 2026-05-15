@@ -4,7 +4,7 @@ import { conversationsApi, settingsApi } from '@/lib/api';
 import { formatRelativeTime, getInitials } from '@/lib/utils';
 import {
   MessageSquare, Search, Send, UserCheck,
-  CheckCheck, RotateCcw, Bot, User, Smartphone, RefreshCw,
+  CheckCheck, RotateCcw, Bot, User, Smartphone, RefreshCw, ChevronDown,
 } from 'lucide-react';
 
 const STATUS_CFG: Record<string, { label: string; color: string; bg: string; dot: string }> = {
