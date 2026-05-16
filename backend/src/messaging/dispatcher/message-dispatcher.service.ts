@@ -19,7 +19,8 @@ export class MessageDispatcherService {
 
   async send(tenantId: string, phone: string, payload: OutboundPayload): Promise<void> {
     const tenant = await this.tenancyService.findById(tenantId);
-    const instanceName = tenant.whatsappInstance?.instanceName;
+    const instanceName = tenant?.whatsappInstance?.instanceName
+      || process.env.EVOLUTION_INSTANCE_NAME;
 
     if (!instanceName) {
       this.logger.warn(`Tenant ${tenantId} has no WhatsApp instance configured`);

@@ -69,8 +69,10 @@ export class MessageProcessorService {
       let messageText = inbound.text || '';
       if (inbound.type === 'audio' && inbound.audioUrl) {
         try {
+          const audioInstance = tenant?.whatsappInstance?.instanceName
+            || process.env.EVOLUTION_INSTANCE_NAME || '';
           const audioBuffer = await this.evolutionApi.downloadMedia(
-            tenant.whatsappInstance.instanceName,
+            audioInstance,
             inbound.messageId,
           );
           messageText = await this.aiService.transcribeAudio(audioBuffer);
