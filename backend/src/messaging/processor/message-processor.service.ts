@@ -146,10 +146,11 @@ export class MessageProcessorService {
 
       // 13. Enviar resposta da IA
       if (aiResult.text) {
+        this.logger.debug(`[${phone}] AI response: "${aiResult.text.substring(0, 60)}..."`);
         await this.dispatcher.send(tenantId, phone, {
           type: 'text',
           text: aiResult.text,
-          delay: 1000,
+          delay: 500,
         });
 
         await this.memoryService.addToContextWindow(tenantId, phone, { role: 'user', content: messageText });

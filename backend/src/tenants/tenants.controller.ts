@@ -166,11 +166,16 @@ export class TenantsController {
       await this.convRepo.delete({ tenantId: user.tenantId });
       await this.clientRepo.delete({ tenantId: user.tenantId });
 
+      const cleanJid = (jid: string) => jid
+        .replace('@s.whatsapp.net', '')
+        .replace('@lid', '')
+        .replace('@c.us', '');
+
       let synced = 0;
       for (const chat of individualChats) {
         try {
-          const phone = chat.remoteJid as string;
-          const name = (chat.pushName && chat.pushName !== phone) ? chat.pushName : phone;
+          const phone = cleanJid(chat.remoteJid as string);
+          const name = (chat.pushName && chat.pushName !== chat.remoteJid) ? chat.pushName : phone;
 
           const client = await this.clientRepo.save(
             this.clientRepo.create({ tenantId: user.tenantId, phone, name }),

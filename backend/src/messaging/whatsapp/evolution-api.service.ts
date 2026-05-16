@@ -70,6 +70,14 @@ export class EvolutionApiService {
     });
   }
 
+  private normalizePhone(jid: string): string {
+    return jid
+      .replace('@s.whatsapp.net', '')
+      .replace('@lid', '')
+      .replace('@c.us', '')
+      .replace('@g.us', '');
+  }
+
   parseWebhookPayload(payload: Record<string, any>): InboundMessage | null {
     try {
       const event = payload.event;
@@ -78,7 +86,11 @@ export class EvolutionApiService {
       const msg = payload.data?.message;
       if (!msg || msg.key?.fromMe) return null; // ignora mensagens próprias
 
-      const phone = msg.key?.remoteJid?.replace('@s.whatsapp.net', '');
+      const rawJid = msg.key?.remoteJid;
+      if (!rawJid) return null;
+      // Ignorar grupos
+      if (rawJid.endsWith('@g.us')) return null;
+      const phone = this.normalizePhone(rawJid);
       if (!phone) return null;
 
       const base: Partial<InboundMessage> = {
@@ -143,8 +155,12 @@ export class EvolutionApiService {
 
   async sendText(opts: SendTextOptions): Promise<void> {
     if (opts.delay) {
-      await this.sendPresence(opts.instanceName, opts.phone, 'composing');
-      await new Promise((r) => setTimeout(r, opts.delay));
+      try {
+        await this.sendPresence(opts.instanceName, opts.phone, 'composing');
+      } catch {
+        // presence é decorativo — não bloqueia o envio
+      }
+      await new Promise((r) => setTimeout(r, Math.min(opts.delay!, 3000)));
     }
     await this.http.post(`/message/sendText/${opts.instanceName}`, {
       number: opts.phone,
