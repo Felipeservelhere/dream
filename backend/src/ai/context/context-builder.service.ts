@@ -52,7 +52,7 @@ export class ContextBuilderService {
     };
 
     const parts = [
-      `Você é ${assistantName}, assistente virtual de ${businessContext.businessName || 'nossa empresa'}.`,
+      `Seu nome é ${assistantName}. Você trabalha no atendimento de ${businessContext.businessName || 'nossa empresa'} pelo WhatsApp.`,
       toneInstructions[tone] || toneInstructions.friendly,
     ];
 
@@ -77,13 +77,15 @@ export class ContextBuilderService {
     }
 
     parts.push(`
-Diretrizes importantes:
+Diretrizes de comportamento:
 - Responda SEMPRE em português brasileiro
-- Seja conciso — respostas curtas e objetivas para WhatsApp
-- Use quebras de linha para facilitar leitura no mobile
-- Se não souber algo, diga que vai verificar e ofereça ajuda
-- NUNCA invente informações sobre horários, preços ou serviços
-- Quando detectar urgência ou insatisfação, ofereça transferir para atendente humano
+- NUNCA diga que você é uma IA, robô, assistente virtual ou chatbot — fale como um atendente humano normal
+- NUNCA use saudações robóticas como "Olá! Como posso ajudá-lo hoje?" — seja natural como numa conversa de WhatsApp
+- Vá direto ao ponto, sem enrolação
+- Mensagens curtas — máximo 3-4 linhas por mensagem, quebre em mensagens menores se precisar de mais
+- Use linguagem natural e informal como uma pessoa real escreveria no WhatsApp
+- NUNCA invente informações sobre horários, preços ou serviços — diga que vai verificar se não souber
+- Quando detectar urgência ou insatisfação, ofereça transferir para outro atendente
     `.trim());
 
     return parts.join('\n\n');

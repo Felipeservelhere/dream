@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { conversationsApi, settingsApi } from '@/lib/api';
 import { formatRelativeTime, getInitials } from '@/lib/utils';
 import {
@@ -34,18 +34,78 @@ export default function ConversationsPage() {
   const [syncLabel,     setSyncLabel]     = useState('');
   const [filter,        setFilter]        = useState('all');
   const [search,        setSearch]        = useState('');
-  const bottomRef  = useRef<HTMLDivElement>(null);
-  const progressRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  function loadConversations() {
+  const bottomRef       = useRef<HTMLDivElement>(null);
+  const progressRef     = useRef<ReturnType<typeof setInterval> | null>(null);
+  const msgPollRef      = useRef<ReturnType<typeof setInterval> | null>(null);
+  const convPollRef     = useRef<ReturnType<typeof setInterval> | null>(null);
+  const selectedRef     = useRef<any>(null);
+  const lastMsgCountRef = useRef<number>(0);
+  const userScrolledUp  = useRef(false);
+
+  // ── Conversation list ──────────────────────────────────────────────────────
+
+  const loadConversations = useCallback(() => {
     return conversationsApi.list()
-      .then((r) => setConversations(r.data?.data || r.data || []))
-      .catch(() => setConversations([]));
-  }
+      .then((r) => {
+        const list = r.data?.data || r.data || [];
+        setConversations(list);
+        // Update selected conv status if it changed
+        if (selectedRef.current) {
+          const updated = list.find((c: any) => c.id === selectedRef.current.id);
+          if (updated) setSelected(updated);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     loadConversations().finally(() => setLoading(false));
+
+    // Poll conversation list every 20s
+    convPollRef.current = setInterval(loadConversations, 20_000);
+    return () => { if (convPollRef.current) clearInterval(convPollRef.current); };
+  }, [loadConversations]);
+
+  // ── Message polling ────────────────────────────────────────────────────────
+
+  const loadMessages = useCallback(async (convId: string, silent = false) => {
+    try {
+      const r = await conversationsApi.messages(convId);
+      const msgs = r.data?.data || r.data || [];
+      if (silent && msgs.length === lastMsgCountRef.current) return; // no change
+      const isNew = msgs.length > lastMsgCountRef.current;
+      lastMsgCountRef.current = msgs.length;
+      setMessages(msgs);
+      // Auto-scroll only when new messages arrive and user hasn't scrolled up
+      if (isNew && !userScrolledUp.current) {
+        setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 80);
+      }
+    } catch { /* silent */ }
   }, []);
+
+  function startMsgPolling(convId: string) {
+    if (msgPollRef.current) clearInterval(msgPollRef.current);
+    lastMsgCountRef.current = 0;
+    msgPollRef.current = setInterval(() => loadMessages(convId, true), 4_000);
+  }
+
+  function stopMsgPolling() {
+    if (msgPollRef.current) { clearInterval(msgPollRef.current); msgPollRef.current = null; }
+  }
+
+  useEffect(() => {
+    return () => stopMsgPolling();
+  }, []);
+
+  // Auto-scroll on initial load (not silent)
+  useEffect(() => {
+    if (messages.length > 0 && !userScrolledUp.current) {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages.length === 0 ? 0 : undefined]); // only on first load
+
+  // ── Sync ──────────────────────────────────────────────────────────────────
 
   function startProgressAnim(targetPct: number, durationMs: number) {
     if (progressRef.current) clearInterval(progressRef.current);
@@ -63,8 +123,6 @@ export default function ConversationsPage() {
     setSyncState('running');
     setSyncProgress(0);
     setSyncLabel('Conectando ao WhatsApp...');
-
-    // Phase 1: connecting (0→25% in 0.6s)
     startProgressAnim(25, 600);
     await new Promise((r) => setTimeout(r, 600));
 
@@ -74,13 +132,15 @@ export default function ConversationsPage() {
     try {
       const r = await settingsApi.syncWhatsapp();
       const { synced = 0, total = 0, error } = r.data ?? {};
-
       if (error) throw new Error(error);
 
-      // Phase 2: done
       clearInterval(progressRef.current!);
       setSyncLabel('Atualizando lista...');
       setSyncProgress(90);
+      // Close current conversation since data was cleared
+      setSelected(null);
+      setMessages([]);
+      stopMsgPolling();
       await loadConversations();
 
       setSyncProgress(100);
@@ -96,25 +156,43 @@ export default function ConversationsPage() {
     }
   }
 
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  // ── Open conversation ──────────────────────────────────────────────────────
 
   async function openConversation(conv: any) {
+    stopMsgPolling();
+    userScrolledUp.current = false;
     setSelected(conv);
-    try {
-      const r = await conversationsApi.messages(conv.id);
-      setMessages(r.data?.data || r.data || []);
-    } catch { setMessages([]); }
+    selectedRef.current = conv;
+    setMessages([]);
+    lastMsgCountRef.current = 0;
+    await loadMessages(conv.id, false);
+    startMsgPolling(conv.id);
   }
+
+  // ── Send message ──────────────────────────────────────────────────────────
 
   async function sendReply() {
     if (!reply.trim() || !selected) return;
     const text = reply;
     setReply('');
-    await conversationsApi.sendMessage(selected.id, text);
-    setMessages((prev) => [...prev, { id: Date.now(), text, direction: 'outbound', sender: 'human', createdAt: new Date() }]);
+    const optimistic = { id: `opt_${Date.now()}`, text, direction: 'outbound', sender: 'human', createdAt: new Date() };
+    setMessages((prev) => [...prev, optimistic]);
+    userScrolledUp.current = false;
+    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+    try {
+      await conversationsApi.sendMessage(selected.id, text);
+    } catch { /* message shown optimistically */ }
   }
+
+  // ── Detect manual scroll ──────────────────────────────────────────────────
+
+  function handleMsgScroll(e: React.UIEvent<HTMLDivElement>) {
+    const el = e.currentTarget;
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    userScrolledUp.current = !atBottom;
+  }
+
+  // ── Filtered list ─────────────────────────────────────────────────────────
 
   const filtered = conversations.filter((c) => {
     const matchFilter = filter === 'all' || c.status === filter;
@@ -170,20 +248,15 @@ export default function ConversationsPage() {
               </div>
               <div style={{ height: 4, borderRadius: 4, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
                 <div style={{
-                  height: '100%',
-                  width: `${syncProgress}%`,
-                  borderRadius: 4,
-                  background: syncState === 'error'
-                    ? 'var(--red)'
-                    : syncState === 'done'
-                    ? 'var(--green)'
-                    : 'linear-gradient(90deg, var(--accent), #8b5cf6)',
+                  height: '100%', width: `${syncProgress}%`, borderRadius: 4,
+                  background: syncState === 'error' ? 'var(--red)' : syncState === 'done' ? 'var(--green)' : 'linear-gradient(90deg, var(--accent), #8b5cf6)',
                   boxShadow: syncState === 'done' ? '0 0 8px rgba(16,185,129,0.5)' : syncState !== 'error' ? '0 0 8px rgba(59,130,246,0.4)' : 'none',
                   transition: 'width 0.1s linear, background 0.3s ease',
                 }} />
               </div>
             </div>
           )}
+
           {/* Search */}
           <div style={{ position: 'relative', marginBottom: 10 }}>
             <Search size={13} color="var(--text3)" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)' }} />
@@ -194,6 +267,7 @@ export default function ConversationsPage() {
               style={{ paddingLeft: 30, fontSize: 12.5, padding: '7px 10px 7px 30px' }}
             />
           </div>
+
           {/* Filters */}
           <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
             {FILTERS.map((f) => (
@@ -318,9 +392,9 @@ export default function ConversationsPage() {
               {/* Action buttons */}
               <div style={{ display: 'flex', gap: 8 }}>
                 {[
-                  { label: 'Assumir',         action: () => conversationsApi.takeover(selected.id),    icon: UserCheck,  color: '#f59e0b' },
-                  { label: 'Resolver',        action: () => conversationsApi.resolve(selected.id),     icon: CheckCheck, color: '#10b981' },
-                  { label: 'Devolver à IA',   action: () => conversationsApi.returnToAi(selected.id),  icon: RotateCcw,  color: '#3b82f6' },
+                  { label: 'Assumir',       action: () => conversationsApi.takeover(selected.id),   icon: UserCheck,  color: '#f59e0b' },
+                  { label: 'Resolver',      action: () => conversationsApi.resolve(selected.id),    icon: CheckCheck, color: '#10b981' },
+                  { label: 'Devolver à IA', action: () => conversationsApi.returnToAi(selected.id), icon: RotateCcw,  color: '#3b82f6' },
                 ].map((btn) => (
                   <button key={btn.label} onClick={btn.action}
                     style={{
@@ -342,11 +416,13 @@ export default function ConversationsPage() {
             </div>
 
             {/* Messages */}
-            <div style={{
-              flex: 1, overflowY: 'auto', padding: '20px',
-              display: 'flex', flexDirection: 'column', gap: 10,
-              background: 'var(--bg2)',
-            }}>
+            <div
+              onScroll={handleMsgScroll}
+              style={{
+                flex: 1, overflowY: 'auto', padding: '20px',
+                display: 'flex', flexDirection: 'column', gap: 10,
+                background: 'var(--bg2)',
+              }}>
               {messages.length === 0 && (
                 <div style={{ textAlign: 'center', color: 'var(--text3)', padding: 40 }}>
                   <ChevronDown size={24} style={{ margin: '0 auto 8px', opacity: .4 }} />

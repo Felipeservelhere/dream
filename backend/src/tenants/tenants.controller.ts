@@ -202,6 +202,11 @@ export class TenantsController {
     if (!evolutionUrl || !evolutionKey || !instanceName) {
       return { success: false, error: 'not_configured' };
     }
+    // Clear all tenant data first
+    await this.msgRepo.delete({ tenantId: user.tenantId });
+    await this.convRepo.delete({ tenantId: user.tenantId });
+    await this.clientRepo.delete({ tenantId: user.tenantId });
+
     try {
       await fetch(`${evolutionUrl}/instance/logout/${instanceName}`, {
         method: 'DELETE',
