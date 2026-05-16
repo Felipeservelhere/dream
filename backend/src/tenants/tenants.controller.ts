@@ -14,6 +14,7 @@ import { User, UserRole } from '../database/entities/user.entity';
 import { AiConfig } from '../database/entities/ai-config.entity';
 import { Client } from '../database/entities/client.entity';
 import { Conversation } from '../database/entities/conversation.entity';
+import { Message } from '../database/entities/message.entity';
 import { IsString, IsOptional, IsEnum } from 'class-validator';
 
 class CreateTenantDto {
@@ -42,6 +43,7 @@ export class TenantsController {
     @InjectRepository(AiConfig) private readonly aiConfigRepo: Repository<AiConfig>,
     @InjectRepository(Client) private readonly clientRepo: Repository<Client>,
     @InjectRepository(Conversation) private readonly convRepo: Repository<Conversation>,
+    @InjectRepository(Message) private readonly msgRepo: Repository<Message>,
   ) {}
 
   @Get('me')
@@ -144,10 +146,11 @@ export class TenantsController {
     const evolutionKey = process.env.EVOLUTION_API_KEY;
 
     if (!evolutionUrl || !evolutionKey || !instanceName) {
-      return { synced: 0, error: 'not_configured' };
+      return { synced: 0, total: 0, error: 'not_configured' };
     }
 
     try {
+      // Fetch chat list from Evolution API
       const res = await fetch(`${evolutionUrl}/chat/findChats/${instanceName}`, {
         method: 'POST',
         headers: { apikey: evolutionKey, 'Content-Type': 'application/json' },
@@ -158,36 +161,31 @@ export class TenantsController {
       const individualChats = (Array.isArray(chats) ? chats : [])
         .filter((c) => !c.remoteJid?.endsWith('@g.us'));
 
+      // Clear all existing data for this tenant before reimporting
+      await this.msgRepo.delete({ tenantId: user.tenantId });
+      await this.convRepo.delete({ tenantId: user.tenantId });
+      await this.clientRepo.delete({ tenantId: user.tenantId });
+
       let synced = 0;
       for (const chat of individualChats) {
         try {
           const phone = chat.remoteJid as string;
-          const name = chat.pushName || phone;
+          const name = (chat.pushName && chat.pushName !== phone) ? chat.pushName : phone;
 
-          let client = await this.clientRepo.findOne({ where: { tenantId: user.tenantId, phone } });
-          if (!client) {
-            client = await this.clientRepo.save(
-              this.clientRepo.create({ tenantId: user.tenantId, phone, name }),
-            );
-          } else if (name && name !== phone && client.name === phone) {
-            await this.clientRepo.update(client.id, { name });
-          }
+          const client = await this.clientRepo.save(
+            this.clientRepo.create({ tenantId: user.tenantId, phone, name }),
+          );
 
-          const existing = await this.convRepo.findOne({
-            where: { tenantId: user.tenantId, clientId: client.id },
-          });
-          if (!existing) {
-            const conv = this.convRepo.create({ tenantId: user.tenantId, clientId: client.id });
-            if (chat.updatedAt) (conv as any).updatedAt = new Date(chat.updatedAt);
-            await this.convRepo.save(conv);
-          }
+          const conv = this.convRepo.create({ tenantId: user.tenantId, clientId: client.id });
+          if (chat.updatedAt) (conv as any).updatedAt = new Date(chat.updatedAt);
+          await this.convRepo.save(conv);
           synced++;
         } catch { /* skip failed chats */ }
       }
 
-      return { synced };
+      return { synced, total: individualChats.length };
     } catch {
-      return { synced: 0, error: 'unreachable' };
+      return { synced: 0, total: 0, error: 'unreachable' };
     }
   }
 

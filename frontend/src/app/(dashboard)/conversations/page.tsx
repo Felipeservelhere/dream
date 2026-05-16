@@ -29,11 +29,13 @@ export default function ConversationsPage() {
   const [messages,      setMessages]      = useState<any[]>([]);
   const [reply,         setReply]         = useState('');
   const [loading,       setLoading]       = useState(true);
-  const [syncing,       setSyncing]       = useState(false);
-  const [syncMsg,       setSyncMsg]       = useState('');
+  const [syncState,     setSyncState]     = useState<'idle'|'running'|'done'|'error'>('idle');
+  const [syncProgress,  setSyncProgress]  = useState(0);
+  const [syncLabel,     setSyncLabel]     = useState('');
   const [filter,        setFilter]        = useState('all');
   const [search,        setSearch]        = useState('');
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const bottomRef  = useRef<HTMLDivElement>(null);
+  const progressRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   function loadConversations() {
     return conversationsApi.list()
@@ -45,19 +47,52 @@ export default function ConversationsPage() {
     loadConversations().finally(() => setLoading(false));
   }, []);
 
+  function startProgressAnim(targetPct: number, durationMs: number) {
+    if (progressRef.current) clearInterval(progressRef.current);
+    const start = Date.now();
+    progressRef.current = setInterval(() => {
+      const elapsed = Date.now() - start;
+      const pct = Math.min(targetPct, (elapsed / durationMs) * targetPct);
+      setSyncProgress(pct);
+      if (pct >= targetPct) clearInterval(progressRef.current!);
+    }, 30);
+  }
+
   async function handleSync() {
-    setSyncing(true);
-    setSyncMsg('');
+    if (syncState === 'running') return;
+    setSyncState('running');
+    setSyncProgress(0);
+    setSyncLabel('Conectando ao WhatsApp...');
+
+    // Phase 1: connecting (0→25% in 0.6s)
+    startProgressAnim(25, 600);
+    await new Promise((r) => setTimeout(r, 600));
+
+    setSyncLabel('Buscando conversas...');
+    startProgressAnim(60, 1200);
+
     try {
       const r = await settingsApi.syncWhatsapp();
-      const count = r.data?.synced ?? 0;
-      setSyncMsg(`${count} conversa${count !== 1 ? 's' : ''} importada${count !== 1 ? 's' : ''}`);
+      const { synced = 0, total = 0, error } = r.data ?? {};
+
+      if (error) throw new Error(error);
+
+      // Phase 2: done
+      clearInterval(progressRef.current!);
+      setSyncLabel('Atualizando lista...');
+      setSyncProgress(90);
       await loadConversations();
+
+      setSyncProgress(100);
+      setSyncLabel(`${synced} de ${total} conversas importadas`);
+      setSyncState('done');
+      setTimeout(() => { setSyncState('idle'); setSyncProgress(0); setSyncLabel(''); }, 4000);
     } catch {
-      setSyncMsg('Erro ao sincronizar');
-    } finally {
-      setSyncing(false);
-      setTimeout(() => setSyncMsg(''), 4000);
+      clearInterval(progressRef.current!);
+      setSyncProgress(100);
+      setSyncLabel('Erro ao sincronizar');
+      setSyncState('error');
+      setTimeout(() => { setSyncState('idle'); setSyncProgress(0); setSyncLabel(''); }, 3000);
     }
   }
 
@@ -94,29 +129,61 @@ export default function ConversationsPage() {
       <div className="card-base" style={{ width: 320, display: 'flex', flexDirection: 'column', overflow: 'hidden', flexShrink: 0 }}>
         {/* Header */}
         <div style={{ padding: '18px 16px 12px', borderBottom: '1px solid var(--border)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
             <h2 style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>Conversas</h2>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              {syncMsg && <span style={{ fontSize: 10, color: 'var(--green)', fontWeight: 600 }}>{syncMsg}</span>}
               <button
                 onClick={handleSync}
-                disabled={syncing}
-                title="Importar todas as conversas do WhatsApp"
+                disabled={syncState === 'running'}
+                title="Reimportar todas as conversas do WhatsApp atual"
                 style={{
                   display: 'flex', alignItems: 'center', gap: 4,
-                  padding: '4px 9px', borderRadius: 7, border: '1px solid var(--border2)',
-                  background: 'var(--accent-glow)', color: 'var(--accent2)',
-                  fontSize: 11, fontWeight: 600, cursor: syncing ? 'wait' : 'pointer',
-                  opacity: syncing ? 0.7 : 1, transition: 'all 0.15s',
+                  padding: '4px 9px', borderRadius: 7,
+                  border: `1px solid ${syncState === 'error' ? 'rgba(239,68,68,.3)' : 'var(--border2)'}`,
+                  background: syncState === 'error' ? 'rgba(239,68,68,.08)' : 'var(--accent-glow)',
+                  color: syncState === 'error' ? 'var(--red)' : 'var(--accent2)',
+                  fontSize: 11, fontWeight: 600,
+                  cursor: syncState === 'running' ? 'wait' : 'pointer',
+                  opacity: syncState === 'running' ? 0.8 : 1,
+                  transition: 'all 0.15s',
                 }}>
-                <RefreshCw size={11} strokeWidth={2.5} style={{ animation: syncing ? 'rotate .8s linear infinite' : 'none' }} />
-                {syncing ? 'Sync...' : 'Sync'}
+                <RefreshCw size={11} strokeWidth={2.5}
+                  style={{ animation: syncState === 'running' ? 'rotate .8s linear infinite' : 'none' }} />
+                {syncState === 'running' ? 'Sync...' : syncState === 'done' ? 'Pronto!' : 'Sync'}
               </button>
               <span style={{ fontSize: 11, color: 'var(--accent2)', fontWeight: 600, background: 'var(--accent-glow)', padding: '2px 8px', borderRadius: 20 }}>
                 {filtered.length}
               </span>
             </div>
           </div>
+
+          {/* Progress bar */}
+          {syncState !== 'idle' && (
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
+                <span style={{ fontSize: 10.5, color: syncState === 'error' ? 'var(--red)' : syncState === 'done' ? 'var(--green)' : 'var(--accent2)', fontWeight: 600 }}>
+                  {syncLabel}
+                </span>
+                <span style={{ fontSize: 10, color: 'var(--text3)', fontWeight: 600 }}>
+                  {Math.round(syncProgress)}%
+                </span>
+              </div>
+              <div style={{ height: 4, borderRadius: 4, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+                <div style={{
+                  height: '100%',
+                  width: `${syncProgress}%`,
+                  borderRadius: 4,
+                  background: syncState === 'error'
+                    ? 'var(--red)'
+                    : syncState === 'done'
+                    ? 'var(--green)'
+                    : 'linear-gradient(90deg, var(--accent), #8b5cf6)',
+                  boxShadow: syncState === 'done' ? '0 0 8px rgba(16,185,129,0.5)' : syncState !== 'error' ? '0 0 8px rgba(59,130,246,0.4)' : 'none',
+                  transition: 'width 0.1s linear, background 0.3s ease',
+                }} />
+              </div>
+            </div>
+          )}
           {/* Search */}
           <div style={{ position: 'relative', marginBottom: 10 }}>
             <Search size={13} color="var(--text3)" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)' }} />
